@@ -142,7 +142,7 @@ export default function DeveloperIDE() {
   const [analysisResult, setAnalysisResult] = useState<DartAnalysisResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isFormatting, setIsFormatting] = useState(false)
-  const [wordWrap, setWordWrap] = useState<"on" | "off">("on")
+  const [wordWrap, setWordWrap] = useState<"on" | "off">("off")
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<any>(null)
   const isMobile = useMobile()
@@ -885,17 +885,9 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
             <ResizableHandle className="bg-gray-700 hover:bg-gray-600 active:bg-blue-500 transition-colors" />
 
             {/* Preview Panel */}
-            <ResizablePanel defaultSize={50} minSize={20} maxSize={80}>
+            <ResizablePanel defaultSize={32} minSize={20} maxSize={35}>
               <div className="h-full bg-gray-800 flex flex-col">
-                <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-300 text-sm font-medium">
-                      Flutter App
-                    </span>
-
-                  </div>
-                </div>
+                
                 <div className="flex-1 overflow-auto">
                   {true ? (
                     <iframe
