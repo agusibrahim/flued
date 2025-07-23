@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import Editor from "@monaco-editor/react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
-import { Code, RotateCcw, Monitor, AlertCircle, CheckCircle, AlignLeft, WrapText, Play } from "lucide-react"
+import { Code, RotateCcw, Monitor, AlertCircle, CheckCircle, AlignLeft, WrapText, Play, RefreshCw } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import type { editor } from "monaco-editor"
+import { set } from "date-fns"
 
 interface DartIssue {
   kind: "error" | "warning" | "info"
@@ -148,7 +149,8 @@ export default function DeveloperIDE() {
 
   const [isCompiling, setIsCompiling] = useState(false)
   const [compiledJs, setCompiledJs] = useState<string | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
+  // const [isRunning, setIsRunning] = useState(false)
+  const [deltaDill, setDeltaDill] = useState("")
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
   // DartPad API host (change here to switch environments)
@@ -167,6 +169,30 @@ export default function DeveloperIDE() {
       setDartCode(value)
       // Use debounced analyzer
       debouncedAnalyze(value)
+    }
+  }
+  // Fungsi resetIframe: reset dan reload iframe sesuai kode Dart
+  async function resetIframe(): Promise<void> {
+    const iframe = iframeRef.current;
+    if (iframe && iframe.parentElement) {
+      // Buat clone dari iframe tanpa child nodes
+      const clone = iframe.cloneNode(false) as HTMLIFrameElement;
+      clone.src = "/frame.html"; // Set ulang src untuk memastikan iframe baru dimuat
+
+      // Tambahkan clone ke parent, lalu hapus iframe lama
+      iframe.parentElement.appendChild(clone);
+      iframe.parentElement.removeChild(iframe);
+
+      // Update ref ke clone (jika perlu)
+      iframeRef.current = clone;
+
+      // Tunggu event 'load' atau timeout 1 detik
+      await Promise.race([
+        new Promise<void>((resolve) => {
+          clone.addEventListener('load', () => resolve(), { once: true });
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 1000)),
+      ]);
     }
   }
 
@@ -305,19 +331,19 @@ export default function DeveloperIDE() {
     }
   }
 
-  const compileDartCode = async () => {
+  const compileDartCode = async (isReload:boolean) => {
     if (!dartCode.trim()) return
 
     setIsCompiling(true)
     try {
-      const response = await fetch(`${DARTPAD_API_HOST}/api/v3/compileNewDDC`, {
+      const response = await fetch(`${DARTPAD_API_HOST}/api/v3/${isReload?'compileNewDDCReload':'compileNewDDC'}`, { // compileNewDDCReload
         method: "POST",
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
         },
         body: JSON.stringify({
           source: dartCode,
-          deltaDill: null,
+          deltaDill:isReload?deltaDill: null,
         }),
       })
 
@@ -325,57 +351,27 @@ export default function DeveloperIDE() {
         const result = await response.json()
         if (result.result) {
           setCompiledJs(result.result)
-          setIsRunning(true)
+          setDeltaDill(result.deltaDill || "")
           // Send compiled JS to iframe after a short delay to ensure iframe is ready
-          setTimeout(() => {
-            var jsb = `
-            function dartPrint(message) {
-  parent.postMessage({
-    'sender': 'frame',
-    'type': 'stdout',
-    'message': message.toString(),
-  }, '*');
-}
-
-window.onerror = function(message, url, line, column, error) {
-  var errorMessage = error == null ? '' : ', error: ' + error;
-  parent.postMessage({
-    'sender': 'frame',
-    'type': 'jserr',
-    'message': message + errorMessage
-  }, '*');
-};
-
-require.config({
-  "baseUrl": "https://storage.googleapis.com/nnbd_artifacts/3.8.1/",
-  "waitSeconds": 60,
-  "onNodeCreated": function(node, config, id, url) { node.setAttribute('crossorigin', 'anonymous'); }
-});
-
-let __ddcInitCode = function() {${result.result}}
-function contextLoaded() {
-  __ddcInitCode();
-  dartDevEmbedder.runMain('package:dartpad_sample/bootstrap.dart', {});
-}
-function moduleLoaderLoaded() {
-  require(["dart_sdk_new", "flutter_web_new"], contextLoaded);
-}
-require(["ddc_module_loader"], moduleLoaderLoaded);
-            `;
+          setTimeout(async () => {
+            var jsb = decorateJavaScript(result.result, {
+              modulesBaseUrl: result.modulesBaseUrl,
+              isNewDDC: true,
+              reload: isReload,
+              isFlutter: true,
+            });
+            if(!isReload)await resetIframe(); // Reset iframe before sending new code
             if (iframeRef.current && iframeRef.current.contentWindow) {
               iframeRef.current.contentWindow.postMessage(
                 {
-                  command: "execute",
+                  command:isReload?"executeReload": "execute",
                   js: jsb,
                 },
                 "*",
               )
               console.log("Sent compiled JS to iframe")
-              console.log(iframeRef.current.contentWindow)
-              iframeRef.current.contentWindow.localStorage.setItem("dartpad_sample", "kokosss")
-              iframeRef.current.contentWindow.document.body.style.backgroundColor = "#ff0000" // Set dark background
             }
-          }, 2500)
+          }, 500)
         }
       } else {
         console.error("Compilation failed:", response.status, response.statusText)
@@ -513,6 +509,152 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
     analyzeDartCode(defaultDartCode)
   }
 
+  function decorateJavaScript(
+    javaScript: string,
+    {
+      modulesBaseUrl,
+      isNewDDC,
+      reload,
+      isFlutter,
+    }: {
+      modulesBaseUrl?: string
+      isNewDDC: boolean
+      reload: boolean
+      isFlutter: boolean
+    }
+  ): string {
+    if (reload) return javaScript
+    // javaScript = "alert('hello world')"; // Uncomment for debug
+
+    let script = ""
+
+    if (isNewDDC) {
+      // Redirect print messages to the host.
+      script += `
+function dartPrint(message) {
+  parent.postMessage({
+    'sender': 'frame',
+    'type': 'stdout',
+    'message': message.toString(),
+  }, '*');
+}
+`
+
+      // JS exception handling
+      script += `
+window.onerror = function(message, url, line, column, error) {
+  var errorMessage = error == null ? '' : ', error: ' + error;
+  parent.postMessage({
+    'sender': 'frame',
+    'type': 'jserr',
+    'message': message + errorMessage
+  }, '*');
+};
+`
+
+      // Set require.js config if modulesBaseUrl provided
+      if (modulesBaseUrl) {
+        script += `
+require.config({
+  "baseUrl": "${modulesBaseUrl}",
+  "waitSeconds": 60,
+  "onNodeCreated": function(node, config, id, url) { node.setAttribute('crossorigin', 'anonymous'); }
+});
+`
+      }
+
+      // Wrap compiled JS
+      script += `let __ddcInitCode = function() {${javaScript}};\n`
+
+      script += `
+function contextLoaded() {
+  __ddcInitCode();
+  dartDevEmbedder.runMain('package:dartpad_sample/bootstrap.dart', {});
+}
+`
+      if (isFlutter) {
+        script += `
+function moduleLoaderLoaded() {
+  require(["dart_sdk_new", "flutter_web_new"], contextLoaded);
+}
+`
+      } else {
+        script += `
+function moduleLoaderLoaded() {
+  require(["dart_sdk_new"], contextLoaded);
+}
+`
+      }
+      script += `require(["ddc_module_loader"], moduleLoaderLoaded);\n`
+    } else {
+      // Redirect print messages to the host.
+      script += `
+function dartPrint(message) {
+  parent.postMessage({
+    'sender': 'frame',
+    'type': 'stdout',
+    'message': message.toString()
+  }, '*');
+}
+`
+
+      // Unload previous version
+      script += `
+require.undef('dartpad_main');
+`
+
+      // JS exception handling
+      script += `
+window.onerror = function(message, url, line, column, error) {
+  var errorMessage = error == null ? '' : ', error: ' + error;
+  parent.postMessage({
+    'sender': 'frame',
+    'type': 'stderr',
+    'message': message + errorMessage
+  }, '*');
+};
+`
+
+      // Set require.js config if modulesBaseUrl provided
+      if (modulesBaseUrl) {
+        script += `
+require.config({
+  "baseUrl": "${modulesBaseUrl}",
+  "waitSeconds": 60,
+  "onNodeCreated": function(node, config, id, url) { node.setAttribute('crossorigin', 'anonymous'); }
+});
+`
+      }
+
+      script += javaScript + "\n"
+
+      script += `
+require(['dart_sdk'],
+  function(sdk) {
+    'use strict';
+    sdk.developer._extensions.clear();
+    sdk.dart.hotRestart();
+  }
+);
+
+require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
+  // SDK initialization.
+  dart_sdk.dart.setStartAsyncSynchronously(true);
+  dart_sdk._isolate_helper.startRootIsolate(() => {}, []);
+
+  // Loads the \`dartpad_main\` module and runs its bootstrapped main method.
+  for (var prop in dartpad_main) {
+    if (prop.endsWith("bootstrap")) {
+      dartpad_main[prop].main();
+    }
+  }
+});
+`
+    }
+
+    return script
+  }
+
   const handlePanelResize = (sizes: number[]) => {
     const approximateWidth = Math.round((sizes[1] / 100) * 1200)
     setPreviewWidth(approximateWidth)
@@ -520,6 +662,30 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
 
   const errorCount = analysisResult?.issues.filter((issue) => issue.kind === "error").length || 0
   const warningCount = analysisResult?.issues.filter((issue) => issue.kind === "warning").length || 0
+
+  // Tambahkan state untuk log jika ingin menampilkan log di UI
+  const [logs, setLogs] = useState<{ type: string; message: string }[]>([])
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      // Pastikan pesan dari iframe yang benar (opsional: cek origin)
+      if (!event.data || typeof event.data !== "object") return
+      if (event.data.sender !== "frame") return
+
+      if (event.data.type === "stdout") {
+        // Log output dari print()
+        setLogs((prev) => [...prev, { type: "stdout", message: event.data.message }])
+        console.log("[Flutter stdout]", event.data.message)
+      } else if (event.data.type === "jserr" || event.data.type === "stderr") {
+        // Log error JS
+        setLogs((prev) => [...prev, { type: "jserr", message: event.data.message }])
+        console.error("[Flutter jserr]", event.data.message)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [])
 
   return (
     <div className="h-screen bg-gray-900 flex flex-col">
@@ -589,7 +755,7 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
           <Button
             variant="ghost"
             size="sm"
-            onClick={compileDartCode}
+            onClick={compileDartCode.bind(null, false)}
             disabled={isCompiling}
             className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
             title="Run Code"
@@ -601,6 +767,21 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
             )}
             <span className="hidden md:inline">Run</span>
           </Button>
+          {deltaDill.length>20? (<Button
+            variant="ghost"
+            size="sm"
+            onClick={compileDartCode.bind(null, true)}
+            disabled={isCompiling}
+            className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
+            title="Run Code"
+          >
+            {isCompiling ? (
+              <div className="w-3 h-3 md:w-4 md:h-4 border border-current border-t-transparent rounded-full animate-spin md:mr-1" />
+            ) : (
+              <RefreshCw className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+            )}
+            <span className="hidden md:inline">Hot Reload</span>
+          </Button>) : null}
           <Button
             variant="ghost"
             size="sm"
@@ -710,20 +891,10 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
                   <div className="flex items-center gap-2">
                     <Monitor className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-300 text-sm font-medium">
-                      {isRunning ? "Flutter App" : "Code Preview"}
+                      Flutter App
                     </span>
-                    {isRunning && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsRunning(false)}
-                        className="text-gray-400 hover:text-white hover:bg-gray-700 px-2 py-1 text-xs"
-                      >
-                        Back to Code
-                      </Button>
-                    )}
+
                   </div>
-                  {previewWidth > 0 && !isRunning && <div className="text-xs text-gray-500">~{previewWidth}px</div>}
                 </div>
                 <div className="flex-1 overflow-auto">
                   {true ? (
@@ -813,7 +984,7 @@ require(["ddc_module_loader"], moduleLoaderLoaded);
             {/* Preview Tab */}
             {activeTab === "preview" && (
               <div className="flex-1 bg-gray-900 overflow-auto">
-                {isRunning ? (
+                {true ? (
                   <iframe
                     ref={iframeRef}
                     src="/frame.html"
