@@ -71,11 +71,6 @@ function runFlutterApp(compiledScript, canvasKitBaseUrl, reload) {
 
 window.addEventListener('load', function () {
   console.log('Iframe loaded');
-  window.addEventListener('storage', (event) => {
-      // Memastikan key-nya benar
-      document.body.innerText= `Storage event triggered: ${event.key} changed to ${event.newValue}`;
-      console.log('Iframe menerima:', event.newValue);
-  });
   window.addEventListener('message', messageHandler, false);
   parent.postMessage({ 'sender': 'frame', 'type': 'ready' }, '*');
 });

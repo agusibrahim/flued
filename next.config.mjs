@@ -4,6 +4,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   output: 'export',
+  devIndicators: false,
   crossOrigin: 'anonymous',
   typescript: {
     ignoreBuildErrors: true,
