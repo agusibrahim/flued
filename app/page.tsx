@@ -1321,16 +1321,6 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleSaveToFile}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
-                      title="Save to File"
-                    >
-                      <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
-                      <span className="hidden md:inline">Save</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
                       onClick={() => {
                         setAiInteractionResult(null);
                         setAiPromptConfig({ visible: true, mode: 'generation' });
@@ -1357,46 +1347,11 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                       <span className="hidden md:inline">Run</span>
                     </Button>
                     {deltaDill.length > 20 ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={compileDartCode.bind(null, true)}
-                        disabled={isCompiling || dartCode === lastCompiledCode}
-                        className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
-                        title="Hot Reload"
-                      >
-                        {isCompiling ? (
-                          <div className="w-3 h-3 md:w-4 md:h-4 border border-current border-t-transparent rounded-full animate-spin md:mr-1" />
-                        ) : (
-                          <RefreshCw className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
-                        )}
+                      <Button variant="ghost" size="sm" onClick={compileDartCode.bind(null, true)} disabled={isCompiling || dartCode === lastCompiledCode} className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3" title="Hot Reload">
+                        {isCompiling ? <div className="w-3 h-3 md:w-4 md:h-4 border border-current border-t-transparent rounded-full animate-spin md:mr-1" /> : <RefreshCw className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />}
                         <span className="hidden md:inline">Hot Reload</span>
                       </Button>
                     ) : null}
-
-                    {/* Logs Toggle Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (isLogsExpanded) {
-                          setIsLogsExpanded(false)
-                          setLogsHeight(0)
-                        } else {
-                          setIsLogsExpanded(true)
-                          setLogsHeight(defaultLogsHeight)
-                        }
-                      }}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
-                      title="Toggle Logs"
-                    >
-                      {isLogsExpanded ? (
-                        <ChevronDown className="w-3 h-3 md:w-4 md:h-4" />
-                      ) : (
-                        <ChevronUp className="w-3 h-3 md:w-4 md:h-4" />
-                      )}
-                      <span className="hidden md:inline ml-1">Logs</span>
-                    </Button>
                   </div>
                 </div>
 
@@ -1791,6 +1746,38 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
               <SelectItem value="local">Localhost Channel</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (isLogsExpanded) {
+                setIsLogsExpanded(false)
+                setLogsHeight(0)
+              } else {
+                setIsLogsExpanded(true)
+                setLogsHeight(defaultLogsHeight)
+              }
+            }}
+            className="text-gray-300 hover:text-white hover:bg-gray-700 h-6 w-6"
+            title="Toggle Logs"
+          >
+            {isLogsExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
+          </Button>
+          {deltaDill.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSaveToFile}
+              className="text-gray-300 hover:text-white hover:bg-gray-700 h-6 w-6"
+              title="Save to File"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Sisi Kanan: Info Versi */}
