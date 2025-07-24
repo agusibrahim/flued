@@ -32,7 +32,6 @@ Flued is packed with features designed to boost your productivity and creativity
 * **Core Editor**: [Monaco Editor](https://microsoft.github.io/monaco-editor/)  
 * **UI & Styling**: [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)  
 * **Backend Services**: [DartPad API](https://www.google.com/search?q=https://stable.api.dartpad.dev/) for compilation, analysis, formatting, and AI services.  
-* **Deployment**: [Vercel](https://vercel.com/) (Recommended)
 
 ## **🚀 How to Run Locally**
 
