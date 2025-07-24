@@ -1,4 +1,5 @@
 # **Flued \- A Smart Web-Based Flutter Editor**
+<img width="920" height="2064" alt="Screenshot 2025-07-24 at 10 41 05" src="https://github.com/user-attachments/assets/b7a383d8-e8fd-403a-bdfe-2701f9b6bc68" />
 
 **Flued** is a sophisticated, fast, and modern web-based Flutter code editor. Built with Next.js and the Monaco Editor (the same engine behind VS Code), this application provides a feature-rich Flutter development experience directly in your browser.
 
@@ -38,8 +39,8 @@ Flued is packed with features designed to boost your productivity and creativity
 To run this project in your local development environment, follow these steps:
 
 1. **Clone this repository:**  
-   git clone https://github.com/YOUR\_USERNAME/YOUR\_REPO\_NAME.git  
-   cd YOUR\_REPO\_NAME
+   git clone https://github.com/agusibrahim/flued.git  
+   cd flued
 
 2. **Install all dependencies using Bun:**  
    bun install
@@ -47,7 +48,7 @@ To run this project in your local development environment, follow these steps:
 3. **Run the development server:**  
    bun run dev
 
-4. Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:3000) in your browser to see the result.
+4. Open [http://localhost:3080](http://localhost:3080) in your browser to see the result.
 
 ## **🤝 Contributing**
 
