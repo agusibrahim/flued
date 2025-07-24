@@ -1,5 +1,5 @@
 # **Flued \- A Smart Web-Based Flutter Editor**
-<img width="920" height="2064" alt="Screenshot 2025-07-24 at 10 41 05" src="https://github.com/user-attachments/assets/b7a383d8-e8fd-403a-bdfe-2701f9b6bc68" />
+<img width="920" height="2064" alt="Screenshot 2025-07-24 at 10 46 35" src="https://github.com/user-attachments/assets/d1eda39d-17d0-47bc-aaa5-8e18bd3f3bee" />
 
 **Flued** is a sophisticated, fast, and modern web-based Flutter code editor. Built with Next.js and the Monaco Editor (the same engine behind VS Code), this application provides a feature-rich Flutter development experience directly in your browser.
 
