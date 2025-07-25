@@ -14,6 +14,16 @@ import { IdeHeader } from "@/components/ide/IdeHeader"
 import { EditorPanel } from "@/components/ide/EditorPanel"
 import { PreviewPanel } from "@/components/ide/PreviewPanel"
 import { detectFlutterWidget, findWidgetBoundaries, generateWrapCode } from "@/lib/editor"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { decorateJavaScript, fileToBase64 } from "@/lib/utils"
 
 // Export interfaces so they can be used in other components
@@ -165,6 +175,18 @@ export default function DeveloperIDE() {
   const [channel, setChannel] = useState(() => {
     if (typeof window === 'undefined') return 'stable';
     return localStorage.getItem('dartpad_channel') || 'stable';
+  });
+  interface ErrorDialogState {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onRetry: (() => void) | null;
+  }
+  const [errorDialog, setErrorDialog] = useState<ErrorDialogState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onRetry: null,
   });
   const [versionInfo, setVersionInfo] = useState({ dartVersion: '', flutterVersion: '' });
 
@@ -733,20 +755,29 @@ export default function DeveloperIDE() {
         }),
       });
 
-      const newCode = await response.text();
+      const responseText = await response.text();
 
-      if (response.ok && newCode.trim() !== "") {
-        setDartCode(newCode);
-        setAiInteractionResult({ originalCode, newCode });
-        analyzeDartCode(newCode);
+      if (response.ok && responseText.trim() !== "") {
+        setDartCode(responseText);
+        setAiInteractionResult({ originalCode, newCode: responseText });
+        analyzeDartCode(responseText);
+        setAiPrompt("");
+        setAttachedFiles([]);
       } else {
-        console.error("AI Modification failed:", response.status, await response.text());
+        const errorDetails = response.ok ? "AI returned empty code." : `Server responded with ${response.status}: ${responseText}`;
+        throw new Error(`AI Modification failed. ${errorDetails}`);
       }
     } catch (error) {
       console.error("AI Modification request error:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during the request.";
+      setErrorDialog({
+        isOpen: true,
+        title: 'AI Modification Failed',
+        message: `An error occurred during AI code modification:\n\n${errorMessage}`,
+        onRetry: () => setAiPromptConfig({ visible: true, mode: 'modification' }),
+      });
     } finally {
       setIsAiLoading(false);
-      setAiPrompt("");
     }
   };
 
@@ -778,21 +809,29 @@ export default function DeveloperIDE() {
         }),
       });
 
-      const newCode = await response.text();
+      const responseText = await response.text();
 
-      if (response.ok && newCode.trim() !== "") {
-        setDartCode(newCode);
-        setAiInteractionResult({ originalCode, newCode });
-        analyzeDartCode(newCode);
+      if (response.ok && responseText.trim() !== "") {
+        setDartCode(responseText);
+        setAiInteractionResult({ originalCode, newCode: responseText });
+        analyzeDartCode(responseText);
+        setAiPrompt("");
+        setAttachedFiles([]);
       } else {
-        console.error("AI Generation failed:", response.status, await response.text());
+        const errorDetails = response.ok ? "AI returned empty code." : `Server responded with ${response.status}: ${responseText}`;
+        throw new Error(`AI Generation failed. ${errorDetails}`);
       }
     } catch (error) {
       console.error("AI Generation request error:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during the request.";
+      setErrorDialog({
+        isOpen: true,
+        title: 'AI Generation Failed',
+        message: `An error occurred during AI code generation:\n\n${errorMessage}`,
+        onRetry: () => setAiPromptConfig({ visible: true, mode: 'generation' }),
+      });
     } finally {
       setIsAiLoading(false);
-      setAiPrompt("");
-      setAttachedFiles([]);
     }
   };
 
@@ -821,6 +860,28 @@ export default function DeveloperIDE() {
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col">
+      <AlertDialog open={errorDialog.isOpen} onOpenChange={(open) => !open && setErrorDialog({ ...errorDialog, isOpen: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{errorDialog.title}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <pre className="whitespace-pre-wrap font-sans text-sm text-muted-foreground">
+                {errorDialog.message}
+              </pre>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (errorDialog.onRetry) {
+                errorDialog.onRetry();
+              }
+            }}>
+              Try Again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {isMobile && (
         <div className="bg-card border-b border-border flex">
           <button
