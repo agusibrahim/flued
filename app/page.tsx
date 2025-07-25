@@ -7,9 +7,12 @@ import { Separator } from "@/components/ui/separator"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"
 import { Code, Sparkles, Check, GitBranch, Undo, AlertCircle, CheckCircle, AlignLeft, WrapText, Play, RefreshCw, ChevronUp, ChevronDown, Trash2, Lightbulb, Download, Paperclip, X } from 'lucide-react'
 import { useMobile } from "@/hooks/use-mobile"
+import { ModeToggle } from "@/components/theme-toggle"
 import type { editor } from "monaco-editor"
 import { set } from "date-fns"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useTheme } from "next-themes"
+import { appSamples } from "@/lib/samples"
 interface DartIssue {
   kind: "error" | "warning" | "info"
   message: string
@@ -169,6 +172,13 @@ export default function DeveloperIDE() {
     return localStorage.getItem('dartpad_channel') || 'stable';
   });
   const [versionInfo, setVersionInfo] = useState({ dartVersion: '', flutterVersion: '' });
+
+  const handleSampleSelect = (sampleTitle: string) => {
+    const sample = appSamples.find((s) => s.title === sampleTitle);
+    if (sample) {
+      setDartCode(sample.code);
+    }
+  };
 
   const apiHost = useMemo(() => {
     if (channel === 'local') {
@@ -875,6 +885,13 @@ export default function DeveloperIDE() {
     setIsAiLoading(true);
 
     const originalCode = editorRef.current.getValue();
+    const attachments = await Promise.all(
+        attachedFiles.map(async (file) => ({
+          name: file.name,
+          base64EncodedBytes: await fileToBase64(file),
+          mimeType: file.type,
+        }))
+      );
 
     try {
       const response = await fetch("https://stable.api.dartpad.dev/api/v3/updateCode", {
@@ -886,7 +903,7 @@ export default function DeveloperIDE() {
           appType: "flutter",
           source: originalCode,
           prompt: aiPrompt,
-          attachments: [],
+          attachments: attachments,
         }),
       });
 
@@ -1251,25 +1268,25 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
   }, [])
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen bg-background text-foreground flex flex-col">
       {/* Mobile Tabs - moved to top level */}
       {isMobile && (
-        <div className="bg-gray-800 border-b border-gray-700 flex">
+        <div className="bg-card border-b border-border flex">
           <button
             onClick={() => setActiveTab("editor")}
-            className={`flex-1 px-3 py-2 text-xs font-normal text-center transition-colors relative ${activeTab === "editor" ? "text-white" : "text-gray-400 hover:text-gray-300"
+            className={`flex-1 px-3 py-2 text-xs font-normal text-center transition-colors relative ${activeTab === "editor" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
           >
             Editor
-            {activeTab === "editor" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></div>}
+            {activeTab === "editor" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
           </button>
           <button
             onClick={() => setActiveTab("preview")}
-            className={`flex-1 px-3 py-2 text-xs font-normal text-center transition-colors relative ${activeTab === "preview" ? "text-white" : "text-gray-400 hover:text-gray-300"
+            className={`flex-1 px-3 py-2 text-xs font-normal text-center transition-colors relative ${activeTab === "preview" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
           >
             Preview
-            {activeTab === "preview" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></div>}
+            {activeTab === "preview" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>}
           </button>
         </div>
       )}
@@ -1281,29 +1298,42 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
           <ResizablePanelGroup direction="horizontal" className="h-full" onLayout={handlePanelResize}>
             {/* Editor Panel with Header */}
             <ResizablePanel defaultSize={50} minSize={20} maxSize={80}>
-              <div className="h-full flex flex-col bg-gray-900 relative">
+              <div className="h-full flex flex-col bg-background relative">
                 {/* Header - now inside editor panel */}
-                <div className="bg-gray-800 border-b border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between">
+                <div className="bg-card border-b border-border px-4 md:px-6 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 md:gap-3">
                     <div className="flex items-center gap-2">
                       <FlutterLogo className="w-6 h-6" />
-                      <h1 className="text-white font-semibold text-base md:text-lg">Flued</h1>
+                      <h1 className="text-foreground font-semibold text-base md:text-lg">Flued</h1>
                     </div>
 
-                    <Separator orientation="vertical" className="h-4 md:h-6 bg-gray-600 hidden sm:block" />
-                    <span className="text-gray-400 text-xs md:text-sm hidden sm:block">
+                    <Separator orientation="vertical" className="h-4 md:h-6 bg-border hidden sm:block" />
+                    <span className="text-muted-foreground text-xs md:text-sm hidden sm:block">
                       v1.0.0
                     </span>
+                    <ModeToggle />
+                    <Select onValueChange={handleSampleSelect}>
+                      <SelectTrigger className="w-[180px] h-9 text-xs bg-card border-border hover:bg-accent focus:ring-primary">
+                        <SelectValue placeholder="Examples" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {appSamples.map((sample) => (
+                          <SelectItem key={sample.title} value={sample.title}>
+                            {sample.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-1 md:gap-2">
                     {/* Analysis Status */}
                     <div className="flex items-center gap-1 mr-2">
                       {isAnalyzing ? (
-                        <div className="w-3 h-3 border border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin"></div>
                       ) : analysisResult ? (
                         <>
                           {errorCount > 0 && (
-                            <div className="flex items-center gap-1 text-red-400">
+                            <div className="flex items-center gap-1 text-destructive">
                               <AlertCircle className="w-3 h-3" />
                               <span className="text-xs">{errorCount}</span>
                             </div>
@@ -1325,7 +1355,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                         setAiInteractionResult(null);
                         setAiPromptConfig({ visible: true, mode: 'generation' });
                       }}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
+                      className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 md:px-3"
                       title="Generate Code with AI"
                     >
                       <Sparkles className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
@@ -1336,7 +1366,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                       size="sm"
                       onClick={compileDartCode.bind(null, false)}
                       disabled={isCompiling}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3"
+                      className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 md:px-3"
                       title="Run Code"
                     >
                       {isCompiling ? (
@@ -1347,7 +1377,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                       <span className="hidden md:inline">Run</span>
                     </Button>
                     {deltaDill.length > 20 ? (
-                      <Button variant="ghost" size="sm" onClick={compileDartCode.bind(null, true)} disabled={isCompiling || dartCode === lastCompiledCode} className="text-gray-300 hover:text-white hover:bg-gray-700 px-2 md:px-3" title="Hot Reload">
+                      <Button variant="ghost" size="sm" onClick={compileDartCode.bind(null, true)} disabled={isCompiling || dartCode === lastCompiledCode} className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 md:px-3" title="Hot Reload">
                         {isCompiling ? <div className="w-3 h-3 md:w-4 md:h-4 border border-current border-t-transparent rounded-full animate-spin md:mr-1" /> : <RefreshCw className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />}
                         <span className="hidden md:inline">Hot Reload</span>
                       </Button>
@@ -1366,7 +1396,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                         value={dartCode}
                         onChange={handleEditorChange}
                         onMount={handleEditorDidMount}
-                        theme="vs-dark"
+                        theme={useTheme().theme === 'dark' ? 'vs-dark' : 'vs-light'}
                         options={{
                           fontSize: 14,
                           fontFamily: "JetBrains Mono, Fira Code, Monaco, monospace",
@@ -1420,19 +1450,19 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                   {/* Logs Panel */}
                   {isLogsExpanded && (
                     <>
-                      <ResizableHandle className="bg-gray-700 hover:bg-gray-600 active:bg-blue-500 transition-colors" />
+                      <ResizableHandle className="bg-border hover:bg-accent active:bg-primary transition-colors" />
                       <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
-                        <div className="h-full bg-gray-800 flex flex-col">
+                        <div className="h-full bg-card flex flex-col">
                           {/* Logs Header */}
-                          <div className="bg-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-600">
-                            <span className="text-white text-sm font-medium">Logs</span>
+                          <div className="bg-muted px-3 py-2 flex items-center justify-between border-b border-border">
+                            <span className="text-foreground text-sm font-medium">Logs</span>
                             <div className="flex items-center gap-2">
                               {logs.length > 0 && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => setLogs([])}
-                                  className="text-gray-300 hover:text-white hover:bg-gray-600 px-2 py-1 h-auto"
+                                  className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 py-1 h-auto"
                                   title="Clear Logs"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -1445,7 +1475,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                                   setIsLogsExpanded(false)
                                   setLogsHeight(0)
                                 }}
-                                className="text-gray-300 hover:text-white hover:bg-gray-600 px-2 py-1 h-auto"
+                                className="text-muted-foreground hover:text-foreground hover:bg-accent px-2 py-1 h-auto"
                                 title="Collapse Logs"
                               >
                                 <ChevronDown className="w-3 h-3" />
@@ -1454,9 +1484,9 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                           </div>
 
                           {/* Logs Content */}
-                          <div className="flex-1 overflow-auto p-2 bg-gray-900">
+                          <div className="flex-1 overflow-auto p-2 bg-background">
                             {logs.length === 0 ? (
-                              <div className="text-gray-500 text-sm italic">No logs yet...</div>
+                              <div className="text-muted-foreground text-sm italic">No logs yet...</div>
                             ) : (
                               <div className="space-y-1">
                                 {logs.map((log, index) => (
@@ -1480,10 +1510,10 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                 </ResizablePanelGroup>
                 {/* 1. AI Loading Overlay */}
                 {isAiLoading && (
-                  <div className="absolute inset-0 bg-gray-900/50 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
-                    <div className="flex items-center gap-3 bg-gray-800 px-6 py-4 rounded-lg shadow-lg border border-blue-500/30">
-                      <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-white text-lg font-medium">AI is modifying your code...</span>
+                  <div className="absolute inset-0 bg-background/50 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
+                    <div className="flex items-center gap-3 bg-card px-6 py-4 rounded-lg shadow-lg border border-primary/30">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-foreground text-lg font-medium">AI is modifying your code...</span>
                     </div>
                   </div>
                 )}
@@ -1491,21 +1521,21 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                 {/* 2. AI Prompt Input Overlay */}
                 {aiPromptConfig.visible && (
                   <div
-                    className="absolute inset-0 bg-gray-900/40 flex items-start justify-center z-20 pt-20 backdrop-blur-[1px]"
+                    className="absolute inset-0 bg-background/40 flex items-start justify-center z-20 pt-20 backdrop-blur-[1px]"
                     onClick={() => setAiPromptConfig({ visible: false, mode: null })} // Klik di luar untuk menutup
                   >
                     <div
-                      className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl border border-blue-500/50"
+                      className="bg-card rounded-lg shadow-2xl w-full max-w-2xl border border-primary/50"
                       onClick={(e) => e.stopPropagation()} // Mencegah penutupan saat klik di dalam
                     >
                       <div className="p-5">
-                        <label htmlFor="ai-prompt" className="block text-sm font-medium text-gray-300 mb-2">
+                        <label htmlFor="ai-prompt" className="block text-sm font-medium text-muted-foreground mb-2">
                           {aiPromptConfig.mode === 'modification'
                             ? 'Describe the code modification you want:'
                             : 'Describe the UI or logic you want to generate:'}
                         </label>
                         <div className="relative">
-                          <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                          <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                           <input
                             type="text"
                             id="ai-prompt"
@@ -1524,13 +1554,13 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                                 ? "e.g., 'add a floating action button to increment the counter'"
                                 : "e.g., 'a login screen with email and password fields'"
                             }
-                            className="w-full bg-gray-900 text-white border border-gray-600 rounded-md py-2 pl-10 pr-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            className="w-full bg-background text-foreground border border-border rounded-md py-2 pl-10 pr-4 focus:ring-2 focus:ring-primary focus:border-primary transition"
                           />
                         </div>
 
-                        {aiPromptConfig.mode === 'generation' && (
+                        {true && (
                           <div className="mt-4">
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2 cursor-pointer w-fit bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-md">
+                            <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 cursor-pointer w-fit bg-accent hover:bg-accent/80 px-3 py-1.5 rounded-md">
                               <Paperclip className="w-4 h-4" />
                               Attach Files (Optional)
                               <input
@@ -1543,11 +1573,11 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                             {attachedFiles.length > 0 && (
                               <div className="mt-2 space-y-1">
                                 {attachedFiles.map((file, index) => (
-                                  <div key={index} className="flex items-center justify-between bg-gray-900/50 text-xs text-gray-300 px-2 py-1 rounded">
+                                  <div key={index} className="flex items-center justify-between bg-background/50 text-xs text-muted-foreground px-2 py-1 rounded">
                                     <span>{file.name}</span>
                                     <button
                                       onClick={() => setAttachedFiles(files => files.filter((_, i) => i !== index))}
-                                      className="text-gray-500 hover:text-red-400"
+                                      className="text-muted-foreground hover:text-destructive"
                                     >
                                       <X className="w-3 h-3" />
                                     </button>
@@ -1564,16 +1594,16 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
 
                 {/* 3. AI Revert Banner */}
                 {aiInteractionResult && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-700 text-white rounded-lg shadow-lg flex items-center gap-4 px-4 py-2 z-10 border border-gray-600 animate-fade-in-up">
-                    <Sparkles className="w-5 h-5 text-blue-300" />
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-card text-foreground rounded-lg shadow-lg flex items-center gap-4 px-4 py-2 z-10 border border-border animate-fade-in-up">
+                    <Sparkles className="w-5 h-5 text-primary" />
                     <span className="text-sm">Code has been updated by AI.</span>
-                    <Separator orientation="vertical" className="h-4 bg-gray-500" />
+                    <Separator orientation="vertical" className="h-4 bg-border" />
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => setAiInteractionResult(null)}
-                        className="text-white hover:bg-gray-600 px-3 py-1 h-auto"
+                        className="text-foreground hover:bg-accent px-3 py-1 h-auto"
                       >
                         <Check className="w-4 h-4 mr-1.5" />
                         Keep
@@ -1585,7 +1615,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                           setDartCode(aiInteractionResult.originalCode);
                           setAiInteractionResult(null);
                         }}
-                        className="text-white hover:bg-gray-600 px-3 py-1 h-auto"
+                        className="text-foreground hover:bg-accent px-3 py-1 h-auto"
                       >
                         <Undo className="w-4 h-4 mr-1.5" />
                         Revert
@@ -1597,11 +1627,11 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
             </ResizablePanel>
 
             {/* Resizable Handle */}
-            <ResizableHandle className="bg-gray-700 hover:bg-gray-600 active:bg-blue-500 transition-colors" />
+            <ResizableHandle className="bg-border hover:bg-accent active:bg-primary transition-colors" />
 
             {/* Preview Panel - now clean without header */}
             <ResizablePanel defaultSize={32} minSize={20} maxSize={35}>
-              <div className="h-full bg-gray-800 flex flex-col">
+              <div className="h-full bg-card flex flex-col">
                 <div className="flex-1 overflow-auto">
                   <iframe
                     ref={iframeRef}
@@ -1623,12 +1653,12 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
           <div className="h-full flex flex-col">
             {/* Editor Tab */}
             {activeTab === "editor" && (
-              <div className="flex-1 flex flex-col bg-gray-900">
+              <div className="flex-1 flex flex-col bg-background">
                 {/* Mobile Header */}
-                <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+                <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div></div>
-                    <h1 className="text-white font-semibold text-sm">DartIDE</h1>
+                    <h1 className="text-foreground font-semibold text-sm">DartIDE</h1>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1636,7 +1666,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                       size="sm"
                       onClick={formatDartCode}
                       disabled={isFormatting}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2"
+                      className="text-muted-foreground hover:text-foreground hover:bg-accent px-2"
                     >
                       {isFormatting ? (
                         <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
@@ -1649,7 +1679,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                       size="sm"
                       onClick={compileDartCode.bind(null, false)}
                       disabled={isCompiling}
-                      className="text-gray-300 hover:text-white hover:bg-gray-700 px-2"
+                      className="text-muted-foreground hover:text-foreground hover:bg-accent px-2"
                     >
                       {isCompiling ? (
                         <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
@@ -1667,7 +1697,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                     value={dartCode}
                     onChange={handleEditorChange}
                     onMount={handleEditorDidMount}
-                    theme="vs-dark"
+                    theme={useTheme().theme === 'dark' ? 'vs-dark' : 'vs-light'}
                     options={{
                       fontSize: 12,
                       fontFamily: "JetBrains Mono, Fira Code, Monaco, monospace",
@@ -1716,7 +1746,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
 
             {/* Preview Tab */}
             {activeTab === "preview" && (
-              <div className="flex-1 bg-gray-900 overflow-auto">
+              <div className="flex-1 bg-background overflow-auto">
                 <iframe
                   ref={iframeRef}
                   src="/frame.html"
@@ -1731,11 +1761,11 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
           </div>
         )}
       </div>
-      <div className="bg-gray-800 border-t border-gray-700 px-4 py-1 flex items-center justify-between text-xs text-gray-400 h-8 shrink-0">
+      <div className="bg-card border-t border-border px-4 py-1 flex items-center justify-between text-xs text-muted-foreground h-8 shrink-0">
         {/* Sisi Kiri: Channel Switcher */}
         <div className="flex items-center gap-2">
           <Select value={channel} onValueChange={(newChannel) => setChannel(newChannel)}>
-            <SelectTrigger className="w-[180px] h-6 text-xs bg-gray-800 border-gray-600 hover:bg-gray-700 focus:ring-blue-500">
+            <SelectTrigger className="w-[180px] h-6 text-xs bg-card border-border hover:bg-accent focus:ring-primary">
               <GitBranch className="w-3 h-3 mr-2" />
               <SelectValue placeholder="Select channel" />
             </SelectTrigger>
@@ -1758,7 +1788,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
                 setLogsHeight(defaultLogsHeight)
               }
             }}
-            className="text-gray-300 hover:text-white hover:bg-gray-700 h-6 w-6"
+            className="text-muted-foreground hover:text-foreground hover:bg-accent h-6 w-6"
             title="Toggle Logs"
           >
             {isLogsExpanded ? (
@@ -1772,7 +1802,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
               variant="ghost"
               size="icon"
               onClick={handleSaveToFile}
-              className="text-gray-300 hover:text-white hover:bg-gray-700 h-6 w-6"
+              className="text-muted-foreground hover:text-foreground hover:bg-accent h-6 w-6"
               title="Save to File"
             >
               <Download className="w-4 h-4" />
@@ -1783,7 +1813,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
         {/* Sisi Kanan: Info Versi */}
         <div className="flex items-center gap-4">
           <span>Dart: {versionInfo.dartVersion}</span>
-          <Separator orientation="vertical" className="h-4 bg-gray-600" />
+          <Separator orientation="vertical" className="h-4 bg-border" />
           <span>Flutter: {versionInfo.flutterVersion}</span>
         </div>
       </div>
