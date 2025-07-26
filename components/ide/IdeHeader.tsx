@@ -9,23 +9,24 @@ import { AlertCircle, CheckCircle, Play, RefreshCw, Sparkles } from "lucide-reac
 import { DartAnalysisResult } from "@/app/page"
 
 const FlutterLogo = ({ className }: { className?: string }) => (
-    <svg
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Flutter"
-      viewBox="0 0 512 512"
-    >
-      <defs>
-        <linearGradient id="a" x1="249" x2="321" y1="401" y2="358" gradientUnits="userSpaceOnUse">
-          <stop stopOpacity=".4" />
-          <stop stopColor="#124793" stopOpacity="0" offset="1" />
-        </linearGradient>
-      </defs>
-      <path d="M191.45 342.89 249.11 401l158.64-159.88H292.4ZM292.4 66.69h115.35L162.61 313.82l-57.7-58.13Z" fill="#5cc8f8" />
-      <path fill="#075b9d" d="m249.11 401 43.29 43.59h115.35L306.8 342.89Z" />
-      <path d="m334.67 371.16-27.87-28.27L249.11 401Z" fill="url(#a)" />
-      <path d="m191.45 342.87 57.69-58.18 57.7 58.15-57.7 58.16Z" fill="#16b9fd" />
-    </svg>
+   <svg
+   className={className}
+    width="737.551" height="436.025" viewBox="0 0 737.551 436.025" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient x1="-.129%" y1="73.064%" x2="84.023%" y2="38.931%" id="a">
+      <stop offset="0%"/>
+      <stop offset="100%"/>
+    </linearGradient>
+  </defs>
+  <g fill="none">
+    <path d="m86.54 276.2 57.66 58.11 158.64-159.88H187.49zM187.49 0h115.35L57.7 247.13 0 189z" fill="#5CC8F8" transform="translate(183.775 36.342)"/>
+    <path fill="#075B9D" d="m144.2 334.31 43.29 43.59h115.35L201.89 276.2z" transform="translate(183.775 36.342)"/>
+    <path fill="url(#a)" d="m229.76 304.47-27.87-28.27-57.69 58.11z" transform="translate(183.775 36.342)"/>
+    <path fill="#16B9FD" d="M86.54 276.18 144.23 218l57.7 58.15-57.7 58.16z" transform="translate(183.775 36.342)"/>
+    <path d="M195.55 436.025v-44.683h-24.263c-34.834 0-41.8-8.168-41.8-48.528V276.99c0-33.152-24.264-54.773-69.669-56.695v-4.324c45.405-1.922 69.668-23.784 69.668-56.696V93.211c0-40.36 6.967-48.527 41.801-48.527h24.264V0h-36.276C94.172 0 73.271 20.66 73.271 84.563v53.332c0 37.716-18.978 55.253-73.271 51.65v57.176c54.293-3.604 73.271 13.933 73.271 51.41v53.332c0 63.902 20.9 84.562 86.004 84.562zm346.45 0h36.275c65.104 0 86.004-20.66 86.004-84.562V298.13c0-37.477 18.979-55.014 73.272-51.41v-57.176c-54.293 3.603-73.272-13.934-73.272-51.65V84.562C664.28 20.66 643.38 0 578.275 0H542v44.684h24.264c34.834 0 41.8 8.168 41.8 48.527v66.064c0 32.912 24.264 54.774 69.668 56.696v4.324c-45.404 1.922-69.668 23.543-69.668 56.695v65.824c0 40.36-6.966 48.528-41.8 48.528H542z" fill="#075B9D"/>
+  </g>
+</svg>
+
   );
 
 interface HeaderProps {
