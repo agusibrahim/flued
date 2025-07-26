@@ -167,6 +167,7 @@ export default function DeveloperIDE() {
   const [wordWrap, setWordWrap] = useState<"on" | "off">("off")
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<any>(null)
+
   const isMobile = useMobile()
 
   const [isCompiling, setIsCompiling] = useState(false)
@@ -374,6 +375,59 @@ export default function DeveloperIDE() {
       }
     }
   }, [apiHost]);
+  const provideHoverInfo = useCallback(async (model: any, position: any) => {
+    try {
+      const offset = model.getOffsetAt(position);
+      const source = model.getValue();
+
+      // Panggil API /document
+      const response = await fetch(`${apiHost}/api/v3/document`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+        body: JSON.stringify({ source, offset }),
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      if (!data.dartdoc && !data.elementDescription) return null;
+
+      // Dapatkan range kata yang di-hover agar popup menempel dengan benar
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      // Format konten untuk ditampilkan di popup menggunakan Markdown
+      const contents = [];
+      if (data.elementDescription) {
+        contents.push({ value: '```dart\n' + data.elementDescription + '\n```' });
+      }
+      if (data.dartdoc) {
+        contents.push({ value: data.dartdoc });
+      }
+      if (data.containingLibraryName) {
+        contents.push({ value: `*From: \`${data.containingLibraryName}\`*` });
+      }
+
+      return {
+        range: range,
+        contents: contents,
+      };
+
+    } catch (error) {
+      console.error("Hover provider error:", error);
+      return null; // Return null jika ada error
+    }
+  }, [apiHost]);
+  const provideHoverInfoRef = useRef(provideHoverInfo);
+  useEffect(() => {
+    provideHoverInfoRef.current = provideHoverInfo;
+  });
 
   const getDartCompletionsRef = useRef(getDartCompletions);
   useEffect(() => {
@@ -443,6 +497,12 @@ export default function DeveloperIDE() {
     monacoRef.current = monaco
 
     try {
+      monaco.languages.registerHoverProvider('dart', {
+        provideHover: (model: any, position: any) => {
+          // Panggil fungsi melalui ref untuk mendapatkan versi terbaru
+          return provideHoverInfoRef.current(model, position);
+        }
+      });
       editor.addAction({
         id: 'format-document-action',
         label: 'Format Document',
