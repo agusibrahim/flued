@@ -12,7 +12,8 @@ Flued is packed with features designed to boost your productivity and creativity
 * **💻 Professional Code Editor**: Powered by Monaco Editor, providing syntax highlighting, code completion, and a responsive typing experience.  
 * **⚡ True Hot Reload**: See changes to your Flutter UI instantly without needing to refresh the entire page, just like local development. The Hot Reload button is only active when there are code changes.  
 * **🧠 Real-time Code Analysis**: Get immediate feedback on errors and warnings in your code as you type, helping you write cleaner code.  
-* **💅 Automatic Code Formatting**: Tidy up your Dart code with a single click or a shortcut (Shift+Alt+F), maintaining consistency and readability.  
+* **💅 Automatic Code Formatting**: Tidy up your Dart code with a single click or a shortcut (Shift+Alt+F), maintaining consistency and readability.
+* **📃 Integrated Dart Code Documentation**: Instant Dart documentation and element details on hover, directly within the editor.
 * **🤖 AI Code Modification & Generation**:  
   * **AI Modification**: Right-click on your code, select "AI Modification," and write a prompt to refactor existing code.  
   * **AI Generation**: Create new widgets or logic from scratch just by describing them in a prompt.  
